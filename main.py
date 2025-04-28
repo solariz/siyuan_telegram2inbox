@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from telegram import Update
 from telegram.ext import ContextTypes
-from functions import log_message, help_command, stats_command, save_command
-from functions_ai import is_url
+from functions import log_message, help_command, stats_command, save_command, is_url
 
 # Load environment variables
 load_dotenv()

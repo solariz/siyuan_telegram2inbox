@@ -10,8 +10,6 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ContextTypes
 import socket
-from functions_siyuan import process_telegram_message, push_to_siyuan
-from functions_ai import generate_summary, is_url
 
 # Get DEBUG flag from environment
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
@@ -51,6 +49,36 @@ logging.getLogger("telegram").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
+
+def is_url(text):
+    """
+    Check if the given text is a URL.
+    
+    Args:
+        text: Text to check
+        
+    Returns:
+        bool: True if text is a URL, False otherwise
+    """
+    # Simple pattern to detect URLs - more permissive than the previous one
+    url_pattern = re.compile(
+        r'^https?://[^\s]+\.[^\s]+',
+        re.IGNORECASE
+    )
+    
+    # Alternative simpler check as fallback
+    is_simple_url = text.strip().startswith(('http://', 'https://'))
+    
+    result = bool(url_pattern.match(text.strip())) or is_simple_url
+    
+    # Only log the full URL in debug mode
+    if result:
+        if DEBUG:
+            logger.debug(f"Text identified as URL: {text.strip()}")
+        else:
+            logger.info("URL detected")
+    
+    return result
 
 def setup_message_log(filename="messages.log"):
     """
@@ -187,6 +215,63 @@ async def log_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if DEBUG:
         logger.debug(f"Message content: {message.text}")
 
+def format_siyuan_content(content: str, user: str, hostname: str) -> str:
+    """
+    Format the message content with markdown template for SiYuan.
+    Handles both regular text and URLs.
+    
+    Args:
+        content (str): The raw message content
+        user (str): Username of the sender
+        hostname (str): Hostname of the sender
+        
+    Returns:
+        str: Formatted markdown content
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    content_stripped = content.strip()
+    
+    if is_url(content_stripped):
+        logger.info("Formatting message as URL bookmark")
+        # Format as a clickable link if it's a URL
+        return f"""## URL Bookmark
+**SUBMIT:** {timestamp}
+**BY:** {user}@{hostname}
+
+[{content_stripped}]({content_stripped})
+"""
+    else:
+        logger.info("Formatting message as text message")
+        # Regular formatting for normal text
+        return f"""## input via telegram
+**SUBMIT:** {timestamp}
+**BY:** {user}@{hostname}
+
+```
+{content}
+```"""
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Handle the /help command. Displays available commands and their descriptions.
+    
+    Args:
+        update: The update object from Telegram
+        context: The context object from Telegram
+    """
+    await update.message.reply_text(TXT_HELP_TEXT)
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Handle the /stats command. Displays system statistics.
+    
+    Args:
+        update: The update object from Telegram
+        context: The context object from Telegram
+    """
+    stats = await get_system_stats()
+    await update.message.reply_text(f"```\n{stats}\n```", parse_mode="Markdown")
+
 async def save_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /s command. Saves the following message to SiYuan.
@@ -213,6 +298,10 @@ async def save_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check if the message is a URL
     is_url_message = is_url(message_text)
+    
+    # Import these here to avoid circular imports
+    from functions_ai import generate_summary
+    from functions_siyuan import process_telegram_message, push_to_siyuan
     
     # Generate AI summary for longer messages or URLs
     title = None
@@ -308,61 +397,4 @@ async def save_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 chat_id=message.chat_id,
                 text=TXT_SEND_SUCCESS
-            )
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Handle the /help command. Displays available commands and their descriptions.
-    
-    Args:
-        update: The update object from Telegram
-        context: The context object from Telegram
-    """
-    await update.message.reply_text(TXT_HELP_TEXT)
-
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Handle the /stats command. Displays system statistics.
-    
-    Args:
-        update: The update object from Telegram
-        context: The context object from Telegram
-    """
-    stats = await get_system_stats()
-    await update.message.reply_text(f"```\n{stats}\n```", parse_mode="Markdown")
-
-def format_siyuan_content(content: str, user: str, hostname: str) -> str:
-    """
-    Format the message content with markdown template for SiYuan.
-    Handles both regular text and URLs.
-    
-    Args:
-        content (str): The raw message content
-        user (str): Username of the sender
-        hostname (str): Hostname of the sender
-        
-    Returns:
-        str: Formatted markdown content
-    """
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    content_stripped = content.strip()
-    
-    if is_url(content_stripped):
-        logger.info("Formatting message as URL bookmark")
-        # Format as a clickable link if it's a URL
-        return f"""## URL Bookmark
-**SUBMIT:** {timestamp}
-**BY:** {user}@{hostname}
-
-[{content_stripped}]({content_stripped})
-"""
-    else:
-        logger.info("Formatting message as text message")
-        # Regular formatting for normal text
-        return f"""## input via telegram
-**SUBMIT:** {timestamp}
-**BY:** {user}@{hostname}
-
-```
-{content}
-```""" 
+            ) 

@@ -12,6 +12,9 @@ from openai import OpenAI
 # Get DEBUG flag from environment
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
+# Configure logging locally to avoid circular imports
+logger = logging.getLogger("functions_ai")
+
 # User agent for web scraping
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
@@ -31,36 +34,6 @@ def get_openai_client():
         return None
     
     return OpenAI(api_key=api_key)
-
-def is_url(text):
-    """
-    Check if the given text is a URL.
-    
-    Args:
-        text: Text to check
-        
-    Returns:
-        bool: True if text is a URL, False otherwise
-    """
-    # Simple pattern to detect URLs - more permissive than the previous one
-    url_pattern = re.compile(
-        r'^https?://[^\s]+\.[^\s]+',
-        re.IGNORECASE
-    )
-    
-    # Alternative simpler check as fallback
-    is_simple_url = text.strip().startswith(('http://', 'https://'))
-    
-    result = bool(url_pattern.match(text.strip())) or is_simple_url
-    
-    # Only log the full URL in debug mode
-    if result:
-        if DEBUG:
-            logger.debug(f"Text identified as URL: {text.strip()}")
-        else:
-            logger.info("URL detected")
-    
-    return result
 
 def scrape_url_content(url):
     """
@@ -165,6 +138,9 @@ def generate_summary(text, is_scraped=False):
     
     # Check if the entire message is just a URL (trim whitespace)
     clean_text = text.strip()
+    
+    # Import is_url here to avoid circular imports
+    from functions import is_url
     
     # Check if the text is a URL and we haven't already scraped it
     if not is_scraped and is_url(clean_text):

@@ -10,11 +10,11 @@ import requests
 from datetime import datetime
 from typing import Tuple, Optional
 
-# Get DEBUG flag from environment
+# Get DEBUG flag and logger from environment to avoid circular imports
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Configure logging without circular dependencies
+logger = logging.getLogger("functions_siyuan")
 
 # API Configuration
 API_URL = "https://liuyun.io/apis/siyuan/inbox/addCloudShorthand"
@@ -119,15 +119,17 @@ def process_telegram_message(message_text: str, user: str, hostname: str) -> Tup
     """
     logger.info(f"Processing message from {user}")
     
+    # Import functions here to avoid circular imports
+    from functions import format_siyuan_content, is_url
+    
     # Format the message content using the function from functions.py
-    from functions import format_siyuan_content # Import here to avoid circular dependency if functions imports this module
     formatted_content = format_siyuan_content(message_text, user, hostname)
     
     # Generate title
     content_stripped = message_text.strip()
-    is_url = content_stripped.startswith(('http://', 'https://'))
+    is_url_check = is_url(content_stripped)
     
-    if is_url:
+    if is_url_check:
         title = f"URL: {content_stripped[:30]}{'...' if len(content_stripped) > 30 else ''}"
         logger.info("Generated URL title")
     else:
