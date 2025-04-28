@@ -1,0 +1,5 @@
+python-telegram-bot>=20.0
+python-dotenv>=1.0.0
+openai>=1.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0 
