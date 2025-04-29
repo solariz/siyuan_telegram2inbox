@@ -2,6 +2,70 @@
 
 A Telegram bot that logs messages and forwards them to a SiYuan Inbox.
 
+## Features
+
+- Save messages to SiYuan Inbox via API
+- Generate AI summaries for longer messages
+- Handle URL forwarding with auto-summarization
+- System statistics with fastfetch
+
+## Commands
+
+- `/help` - Show help message
+- `/s [message]` - Save a message to SiYuan
+- `/stats` - Get system statistics
+
+## Advanced Features
+
+### AI Summarization
+
+For messages longer than 128 characters, the bot uses OpenAI to generate a concise summary. This summary is used as the title for the Siyuan note and added to the note content for context.
+
+The title format is: `YYYY-MM-DD Summary Text`
+
+### URL Scraping and Summarization
+
+When a URL is posted in the chat, the bot will:
+1. Scrape the web page content
+2. Strip HTML tags and extract the text
+3. Send the content to OpenAI for summarization
+4. Create a Siyuan inbox note with the summary and original URL
+
+This allows you to quickly capture and summarize web content without copying and pasting.
+
+## Screenshots
+
+**Telegram:**
+
+![screenshot_telegram_bot-min](https://github.com/user-attachments/assets/1341266e-7ac7-4270-9ee3-56e7709eadc9)
+
+**Siyuan Result:**
+
+![screenshot_siyuan_inbox-min](https://github.com/user-attachments/assets/ed57969d-0ccb-4e47-aef1-9da3bb5d2879)
+
+
+
+
+
+---
+
+## Requirements
+
+- Python 3.7+
+- python-telegram-bot
+- openai
+- requests
+- beautifulsoup4 
+
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Configure the `.env` file
+4. Run the bot: `python main.py`
+
+
 ## Configuration
 
 Copy the `sample.env` file to `.env` and edit the values:
@@ -37,26 +101,9 @@ You can customize these user-facing messages by editing these variables in the `
 
 Note: The help text (`TXT_HELP_TEXT`) is defined in the code and cannot be customized via .env file due to Python-dotenv limitations with multiline values.
 
-## Commands
 
-- `/help` - Show help message
-- `/s [message]` - Save a message to SiYuan
-- `/stats` - Get system statistics
 
-## Features
 
-- Log messages to a file
-- Save messages to SiYuan Inbox
-- Generate AI summaries for longer messages
-- Handle URL forwarding with auto-summarization
-- System statistics with fastfetch
-
-## Installation
-
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure the `.env` file
-4. Run the bot: `python main.py`
 
 ## Create Service User
 
@@ -117,41 +164,5 @@ Create a systemd service file to run the bot as a service:
    sudo journalctl -u telegram-rem-bot.service -f
    ```
 
-## Log File Format
 
-Messages are logged in JSON format with the following fields:
-- timestamp
-- user_id
-- username
-- first_name
-- last_name
-- chat_id
-- message_id
-- text 
 
-## Advanced Features
-
-### AI Summarization
-
-For messages longer than 128 characters, the bot uses OpenAI to generate a concise summary. This summary is used as the title for the Siyuan note and added to the note content for context.
-
-The title format is: `YYYY-MM-DD Summary Text`
-
-### URL Scraping and Summarization
-
-When a URL is posted in the chat, the bot will:
-1. Scrape the web page content
-2. Strip HTML tags and extract the text
-3. Send the content to OpenAI for summarization
-4. Create a Siyuan note with the summary and original URL
-
-This allows you to quickly capture and summarize web content without copying and pasting.
-
-## Requirements
-
-- Python 3.7+
-- python-telegram-bot
-- python-dotenv
-- openai
-- requests
-- beautifulsoup4 
