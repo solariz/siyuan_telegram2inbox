@@ -37,11 +37,14 @@ This allows you to quickly capture and summarize web content without copying and
 
 **Telegram:**
 
-![screenshot_telegram_bot-min](https://github.com/user-attachments/assets/1341266e-7ac7-4270-9ee3-56e7709eadc9)
+![screenshot_telegram_bot-min](https://github.com/user-attachments/assets/6781286e-e86c-4e12-a561-1d6394104e38)
+
+
 
 **Siyuan Result:**
 
-![screenshot_siyuan_inbox-min](https://github.com/user-attachments/assets/ed57969d-0ccb-4e47-aef1-9da3bb5d2879)
+![screenshot_siyuan_inbox-min](https://github.com/user-attachments/assets/11fe32dd-5643-4a79-972a-22ee20fc2cfe)
+
 
 
 
