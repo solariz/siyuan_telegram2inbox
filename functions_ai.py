@@ -167,11 +167,11 @@ def generate_summary(text, is_scraped=False):
         # Ensure the text is within limits for the API
         truncated_text = truncate_for_openai(text)
         
-        system_prompt = "You are a summarization assistant. Create concise summaries."
-        user_prompt = f"Summarize this content in 2-5 words for a headline. Return in JSON like: {{\"h\": \"max 2 to 4 words\",\"s\": \"this is a summary in one or two sentence, which can also be a bit longer if needed on a complex topic.\" }}"
+        system_prompt = "You are a summarization assistant. Create concise summaries that instantly reveal the relevant ontext when read.."
+        user_prompt = f"Return in JSON like: {{\"h\": \"headine, max 2 to 5 words\",\"s\": \"summary, this is a summary telling what the given input is about, 1-3 sentence long.\" }}"
         
         if is_scraped:
-            user_prompt += "\n\nThis is output from a scraped HTML page, try your best to get what the content is about."
+            user_prompt += "\n\nThis is output from a scraped HTML page, try your best to tell what the content is about."
         
         user_prompt += f"\n\nContent: {truncated_text}"
         
