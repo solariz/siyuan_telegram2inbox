@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from telegram import Update
 from telegram.ext import ContextTypes
-from functions import log_message, help_command, stats_command, save_command, is_url
+from functions import log_message, help_command, stats_command, save_command, article_command, is_url
 
 # Load environment variables
 load_dotenv()
@@ -136,6 +136,7 @@ def main():
         # Add handlers
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("s", save_command))
+        application.add_handler(CommandHandler("a", article_command))
         application.add_handler(CommandHandler("stats", stats_command))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, log_message))
         

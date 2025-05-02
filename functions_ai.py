@@ -191,3 +191,72 @@ def generate_summary(text, is_scraped=False):
     except Exception as e:
         logger.error(f"Error generating summary: {e}")
         return False, str(e) 
+
+def generate_article(text, is_scraped=False):
+    """
+    Generate a formatted article from the provided text using OpenAI.
+    
+    Args:
+        text: The text to transform into an article
+        is_scraped: Whether the text is from a scraped webpage
+        
+    Returns:
+        tuple: (success, result) where result is either the article dict or error message
+    """
+    logger.info("Starting article generation")
+    
+    # Check if the entire message is just a URL (trim whitespace)
+    clean_text = text.strip()
+    
+    # Import is_url here to avoid circular imports
+    from functions import is_url
+    
+    # Check if the text is a URL and we haven't already scraped it
+    if not is_scraped and is_url(clean_text):
+        logger.info("Detected URL, will scrape content first")
+        success, content = scrape_url_content(clean_text)
+        
+        if success:
+            logger.info("Successfully scraped URL content")
+            # Call generate_article again with the scraped content and is_scraped=True
+            return generate_article(content, is_scraped=True)
+        else:
+            logger.error(f"Failed to scrape URL: {content}")
+            # Fall back to processing the URL itself
+            logger.info("Falling back to processing the URL directly")
+    
+    client = get_openai_client()
+    if not client:
+        return False, "OpenAI API key not configured"
+    
+    model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+    logger.info(f"Using OpenAI model: {model}")
+    
+    try:
+        # Ensure the text is within limits for the API
+        truncated_text = truncate_for_openai(text)
+        
+        system_prompt = "You are a personal assistant tasked with writing down given information into a concise article optimised for human readability and well formatted, you can use markdown syntax, emojis and tools needed to format it well. For Lists use bulletpoints."
+        user_prompt = f"Return in JSON like: {{\"h\": \"headine, max 2 to 5 words which let the user at first glance understand what this article is about.\",\"s\": \"Article max. 300 words.\" }}"
+        
+        if is_scraped:
+            user_prompt += "\n\nThis is output from a scraped HTML page, transform it into a well-structured article."
+        
+        user_prompt += f"\n\nContent: {truncated_text}"
+        
+        logger.info("Sending request to OpenAI API")
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        logger.info(f"Generated article headline: {result['h']}")
+        return True, result
+    except Exception as e:
+        logger.error(f"Error generating article: {e}")
+        return False, str(e) 

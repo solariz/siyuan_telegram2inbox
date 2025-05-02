@@ -20,6 +20,8 @@ BASIC_INFO = os.getenv("DEBUG", "False").lower() != "false"
 # Get user-facing messages from environment or use defaults
 TXT_GENERAL_HELP = os.getenv("TXT_GENERAL_HELP", "Hmm, check /help to see how I may assist you...")
 TXT_MISSING_CONTENT = os.getenv("TXT_MISSING_CONTENT", "Please provide content to save after the /s command")
+TXT_MISSING_ARTICLE_CONTENT = os.getenv("TXT_MISSING_ARTICLE_CONTENT", "Please provide content for your article after the /a command")
+TXT_ARTICLE_TOO_SHORT = os.getenv("TXT_ARTICLE_TOO_SHORT", "Your content is too short. Please provide at least 128 characters for generating an article.")
 TXT_SEND_FAILED = os.getenv("TXT_SEND_FAILED", "❌ couldn't send to Siyuan")
 TXT_SEND_SUCCESS = os.getenv("TXT_SEND_SUCCESS", "✔️ sent")
 TXT_SEND_SUCCESS_WITH_TITLE = os.getenv("TXT_SEND_SUCCESS_WITH_TITLE", "✔️ sent as \"{title}\"")
@@ -27,6 +29,7 @@ TXT_HELP_TEXT = os.getenv("TXT_HELP_TEXT", """
 Available commands:
 /help - Show this help message
 /s [message] - Save a message to SiYuan
+/a [text] - Generate and save an article based on the given text
 /stats - Get system statistics
 
 You can also send any message, but it won't be saved to SiYuan 
@@ -398,3 +401,88 @@ async def save_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=message.chat_id,
                 text=TXT_SEND_SUCCESS
             ) 
+
+async def article_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Handle the /a command. Generates an article from the input and saves it to SiYuan.
+    
+    Args:
+        update: The update object from Telegram
+        context: The context object from Telegram
+    """
+    # Check if there's any text after the command
+    if not context.args:
+        await update.message.reply_text(TXT_MISSING_ARTICLE_CONTENT)
+        return
+    
+    # Get message details
+    message = update.message
+    user = message.from_user.username or message.from_user.first_name
+    hostname = socket.gethostname()
+    
+    # Log basic information about article command
+    logger.info(f"Article command from {user}")
+    
+    # Combine all arguments into a single message text
+    message_text = ' '.join(context.args)
+    
+    # Check if content is long enough
+    if len(message_text) < 128 and not is_url(message_text):
+        await message.reply_text(TXT_ARTICLE_TOO_SHORT)
+        return
+    
+    # Import these here to avoid circular imports
+    from functions_ai import generate_article
+    from functions_siyuan import push_to_siyuan
+    
+    # Check if the message is a URL
+    is_url_message = is_url(message_text)
+    
+    if is_url_message:
+        logger.info("Processing URL for article generation")
+    else:
+        logger.info("Processing text for article generation")
+    
+    # Generate article using AI
+    success, article_result = generate_article(message_text)
+    
+    if success:
+        article_title = article_result['h']
+        
+        # Format title with date
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        title = f"{current_date} {article_title}"
+        
+        # Format message display for URL vs text
+        message_display = message_text
+        if is_url_message:
+            url = message_text.strip()
+            message_display = f"[{url}]({url})"
+        
+        # Format content with article
+        formatted_content = f"""## {article_title}
+{article_result['s']}
+
+## input via telegram
+**SUBMIT:** {datetime.now().strftime("%Y-%m-%d %H:%M")}
+**BY:** {user}@{hostname}
+
+{message_display}
+"""
+        
+        # Push to Siyuan
+        success, response = push_to_siyuan(formatted_content, title)
+        
+        if not success:
+            logger.error(f"Failed to forward article to Siyuan: {response}")
+            await message.reply_text(TXT_SEND_FAILED)
+        else:
+            logger.info(f"Article successfully forwarded to Siyuan as '{article_title}'")
+            # Send success message with the article title
+            await context.bot.send_message(
+                chat_id=message.chat_id,
+                text=TXT_SEND_SUCCESS_WITH_TITLE.format(title=article_title)
+            )
+    else:
+        logger.error(f"Failed to generate article: {article_result}")
+        await message.reply_text(f"{TXT_SEND_FAILED}: Could not generate article") 
